@@ -1,0 +1,63 @@
+
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #F7FAFC;
+  --foreground: #22223B;
+  --pastel-blue: #A7C7E7;
+  --pastel-green: #B7E7A7;
+  --pastel-purple: #C7A7E7;
+  --pastel-pink: #E7A7C7;
+  --pastel-yellow: #FDF6B2;
+  --pastel-bg: #F7FAFC;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Roboto Mono', 'Fira Mono', 'Courier New', Courier, monospace;
+}
+
+.bg-pastel-bg {
+  background-color: var(--pastel-bg);
+}
+.text-pastel-blue,
+.text-pastel-green,
+.text-pastel-purple,
+.text-pastel-pink {
+  color: #222;
+  font-weight: bold;
+}
+.border-pastel-blue {
+  border-color: var(--pastel-blue);
+}
+.border-pastel-green {
+  border-color: var(--pastel-green);
+}
+.border-pastel-purple {
+  border-color: var(--pastel-purple);
+}
+.border-pastel-pink {
+  border-color: var(--pastel-pink);
+}
+.bg-pastel-blue {
+  background-color: var(--pastel-blue);
+}
+.bg-pastel-green {
+  background-color: var(--pastel-green);
+}
+.bg-pastel-purple {
+  background-color: var(--pastel-purple);
+}
+.bg-pastel-pink {
+  background-color: var(--pastel-pink);
+}
