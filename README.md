@@ -106,3 +106,15 @@ Qoya acts as a virtual administrative assistant, automating repetitive tasks, en
 ## Graphic assets
 https://drive.google.com/drive/folders/14km4XduTWgAJsIJfOJRoAYdPwBp5ztLH
 
+## Presentation
+https://www.figma.com/proto/bkrGfHMzFYZrsM3b3ftUFQ/Untitled?node-id=5-689&p=f&t=68vHu9ycyQ3wJQSF-1&scaling=contain&content-scaling=fixed&page-id=5%3A2
+
+## Qoya Team
+<img width="721" height="1280" alt="image" src="https://github.com/user-attachments/assets/e1eccd2d-9eac-415d-b169-da4dbe652604" />
+Sara Díaz - Frontend
+Gabriela Ramirez - Fullstack
+Jani Jesse - Fullstack
+Yamille Celis - UX/XD
+Alexandra Jaime - Business
+
+
