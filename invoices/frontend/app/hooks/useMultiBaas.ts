@@ -39,9 +39,10 @@ const useMultiBaas = (): MultiBaasHook => {
   const chain = (process.env.NEXT_PUBLIC_MULTIBAAS_CHAIN_ID || "ethereum").toString().replace(/['"]/g, "") as "ethereum" | string;
 
   // Memoize mbConfig
+  // Using API v1 as per latest MultiBaas documentation
   const mbConfig = useMemo(() => {
     return new Configuration({
-      basePath: new URL("/api/v0", mbBaseUrl).toString(),
+      basePath: new URL("/api/v1", mbBaseUrl).toString(),
       accessToken: mbApiKey,
     });
   }, [mbBaseUrl, mbApiKey]);
@@ -173,8 +174,8 @@ const useMultiBaas = (): MultiBaasHook => {
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
     try {
       // Use direct HTTP call since CloudWalletsApi is not exported from the SDK
-      // Use the same basePath structure as other APIs
-      const basePath = new URL("/api/v0", mbBaseUrl).toString();
+      // Using API v1 as per latest MultiBaas documentation
+      const basePath = new URL("/api/v1", mbBaseUrl).toString();
       const apiUrl = `${basePath}/cloud-wallets`;
       const response = await fetch(apiUrl, {
         method: "GET",
