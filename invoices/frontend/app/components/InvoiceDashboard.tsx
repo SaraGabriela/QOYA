@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import useMultiBaas from "../hooks/useMultiBaas";
 import AISuggestions from "./AISuggestions";
 
@@ -37,7 +37,7 @@ const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
       try {
         // Optionally warm the list from the API/mock
         await getInvoiceEvents(cloudWalletAddress);
-      } catch (err) {
+      } catch {
         // ignore
       } finally {
         setIsLoading(false);

@@ -69,12 +69,17 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
     setIsUploading(true);
 
     try {
-      const txHash = await registerInvoice(invoiceHash, cloudWalletAddress);
-      
+      const txHash = await registerInvoice(invoiceHash, cloudWalletAddress, {
+        amount,
+        provider,
+      });
+
       if (txHash) {
         alert(`Factura registrada exitosamente! Hash de transacción: ${txHash}`);
         setSelectedFile(null);
         setInvoiceHash("");
+        setAmount("");
+        setProvider("");
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -91,16 +96,11 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
       setIsUploading(false);
     }
   };
-            const txHash = await registerInvoice(invoiceHash, cloudWalletAddress, {
-              amount,
-              provider,
-            });
+
   return (
     <div className="invoice-upload-form">
       <h2 className="form-title">Tokenizar Factura</h2>
       <form onSubmit={handleSubmit} className="form">
-              setAmount("");
-              setProvider("");
         <div className="form-group">
           <label htmlFor="pdf-file" className="form-label">
             Seleccionar archivo PDF
@@ -115,9 +115,7 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
             className="form-input-file"
           />
           {selectedFile && (
-            <p className="form-file-name">
-              Archivo seleccionado: {selectedFile.name}
-            </p>
+            <p className="form-file-name">Archivo seleccionado: {selectedFile.name}</p>
           )}
         </div>
 
@@ -127,6 +125,30 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
             <p>Calculando hash del archivo...</p>
           </div>
         )}
+
+        <div className="form-group">
+          <label className="form-label">Proveedor</label>
+          <input
+            type="text"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            placeholder="Nombre del proveedor"
+            className="form-input"
+            disabled={isUploading}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Monto</label>
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Ej: 1000 ARS"
+            className="form-input"
+            disabled={isUploading}
+          />
+        </div>
 
         {invoiceHash && !isProcessing && (
           <div className="form-group">
@@ -148,28 +170,4 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
 };
 
 export default InvoiceUploadForm;
-
-              <div className="form-group">
-                <label className="form-label">Proveedor</label>
-                <input
-                  type="text"
-                  value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
-                  placeholder="Nombre del proveedor"
-                  className="form-input"
-                  disabled={isUploading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Monto</label>
-                <input
-                  type="text"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Ej: 1000 ARS"
-                  className="form-input"
-                  disabled={isUploading}
-                />
-              </div>
 

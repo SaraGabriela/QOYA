@@ -58,7 +58,7 @@ const emitInvoices = () => {
   invoiceSubscribers.forEach((cb) => {
     try {
       cb(globalInvoices);
-    } catch (e) {
+    } catch {
       // ignore subscriber errors
     }
   });
@@ -344,9 +344,23 @@ const useMultiBaas = (): MultiBaasHook => {
     }
   }, [listCloudWallets]);
 
+  // Reactive invoices state inside the hook instance (subscribes to global updates)
+  const [invoices, setInvoices] = useState<InvoiceEvent[]>(globalInvoices);
+
+  useEffect(() => {
+    const cb = (items: InvoiceEvent[]) => setInvoices(items);
+    invoiceSubscribers.add(cb);
+    // Ensure current value is in state
+    setInvoices(globalInvoices);
+    return () => {
+      invoiceSubscribers.delete(cb);
+    };
+  }, []);
+
   return {
     getChainStatus,
     registerInvoice,
+    invoices,
     getInvoiceEvents,
     listCloudWallets,
     getCloudWalletAddress,
