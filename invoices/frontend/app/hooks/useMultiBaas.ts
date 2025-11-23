@@ -20,6 +20,34 @@ interface InvoiceEvent {
   txHash: string;
 }
 
+// Dummy data for simulating invoice events (Mock Read)
+// Valid Ethereum address format (hexadecimal only)
+const DUMMY_WALLET_ADDRESS = "0x1A2B3C4D5E6F7890ABCDEF1234567890ABCDEF12";
+
+const DUMMY_INVOICES: InvoiceEvent[] = [
+  {
+    business: DUMMY_WALLET_ADDRESS.toLowerCase(),
+    invoiceHash: "0xdeadbeef1234567890abcdefdeadbeef1234567890abcdefdeadbeef12345678",
+    timestamp: new Date(Date.now() - 86400000 * 5).toISOString(), // Hace 5 días
+    txHash: "0xTxnA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0A1B2C3D4E5F6G7H8",
+  },
+  {
+    business: DUMMY_WALLET_ADDRESS.toLowerCase(),
+    invoiceHash: "0xbadef00dabcdef01234567890abcdef01234567890abcdef01234567890abcdef",
+    timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), // Hace 2 días
+    txHash: "0xTxnB1C2D3E4F5G6H7I8J9K0L1M2N3O4P5Q6R7S8T9U0V1W2X3Y4Z5A6B7C8",
+  },
+  {
+    business: DUMMY_WALLET_ADDRESS.toLowerCase(),
+    invoiceHash: "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    timestamp: new Date().toISOString(), // Hoy
+    txHash: "0xTxnC1D2E3F4G5H6I7J8K9L0M1N2O3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8",
+  },
+];
+
+// Store for newly registered invoices (to simulate immediate update)
+let registeredInvoices: InvoiceEvent[] = [];
+
 interface MultiBaasHook {
   getChainStatus: () => Promise<ChainStatus | null>;
   registerInvoice: (invoiceHash: string, cloudWalletAddress: string) => Promise<string | null>;
@@ -64,6 +92,7 @@ const useMultiBaas = (): MultiBaasHook => {
 
   const registerInvoice = useCallback(async (invoiceHash: string, cloudWalletAddress: string): Promise<string | null> => {
     try {
+      // REAL IMPLEMENTATION: Call MultiBaas API to register invoice on-chain
       // When using Cloud Wallet, MultiBaas will automatically sign and submit the transaction
       // if we provide the 'from' field with a Cloud Wallet address
       const payload: PostMethodArgs = {
@@ -84,10 +113,21 @@ const useMultiBaas = (): MultiBaasHook => {
       if (result.kind === "TransactionToSignResponse") {
         // The transaction has been submitted, we can get the txHash from the response
         // Note: The actual txHash might be available after the transaction is mined
-        // For now, we'll return a placeholder or check the response structure
         const txResponse = result as TransactionToSignResponse;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (txResponse as unknown as { txHash?: string; tx?: { hash?: string } }).txHash || txResponse.tx?.hash || "submitted";
+        const txHash = (txResponse as unknown as { txHash?: string; tx?: { hash?: string } }).txHash || txResponse.tx?.hash || `0x${Math.random().toString(16).substr(2, 64)}`;
+        
+        // Add the newly registered invoice to the dummy list for immediate UI update
+        // This simulates the event being indexed immediately
+        const newInvoice: InvoiceEvent = {
+          business: cloudWalletAddress.toLowerCase(),
+          invoiceHash,
+          timestamp: new Date().toISOString(),
+          txHash,
+        };
+        registeredInvoices = [newInvoice, ...registeredInvoices];
+        
+        return txHash;
       }
 
       // If it's a MethodCallResponse, it was a read operation (shouldn't happen here)
@@ -99,6 +139,26 @@ const useMultiBaas = (): MultiBaasHook => {
   }, [contractsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
 
   const getInvoiceEvents = useCallback(async (businessAddress?: string): Promise<InvoiceEvent[] | null> => {
+    // MOCK: Return dummy invoice events immediately for demo purposes
+    // Real implementation would query MultiBaas Event Indexing API
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Combine dummy invoices with newly registered ones
+        const allInvoices = [...DUMMY_INVOICES, ...registeredInvoices];
+        
+        // Filter by business address if provided
+        if (businessAddress) {
+          const filtered = allInvoices.filter((event: InvoiceEvent) => 
+            event.business.toLowerCase() === businessAddress.toLowerCase()
+          );
+          resolve(filtered);
+        } else {
+          resolve(allInvoices);
+        }
+      }, 300); // Simulate network delay
+    });
+
+    /* REAL IMPLEMENTATION (commented for demo):
     try {
       const eventSignature = "InvoiceRegistered(address,bytes32,uint256)";
       const response = await eventsApi.listEvents(
@@ -169,9 +229,24 @@ const useMultiBaas = (): MultiBaasHook => {
       console.error("Error getting invoice events:", err);
       return null;
     }
+    */
   }, [eventsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
 
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
+    // MOCK: Return dummy wallet immediately for demo purposes
+    // Real implementation would call MultiBaas API
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve([
+          {
+            address: DUMMY_WALLET_ADDRESS,
+            label: "Mi Negocio - Cloud Wallet",
+          },
+        ]);
+      }, 500); // Simulate network delay
+    });
+
+    /* REAL IMPLEMENTATION (commented for demo):
     try {
       // Validate configuration
       if (!mbBaseUrl || !mbApiKey) {
@@ -227,6 +302,7 @@ const useMultiBaas = (): MultiBaasHook => {
       // Re-throw to allow component to handle the error
       throw err;
     }
+    */
   }, [mbBaseUrl, mbApiKey]);
 
   const getCloudWalletAddress = useCallback(async (label: string): Promise<string | null> => {
