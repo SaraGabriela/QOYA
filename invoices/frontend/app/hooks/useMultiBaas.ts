@@ -1,6 +1,5 @@
 "use client";
-import type { PostMethodArgs, MethodCallResponse, TransactionToSignResponse, Event } from "@curvegrid/multibaas-sdk";
-import type { SendTransactionParameters } from "@wagmi/core";
+import type { PostMethodArgs, MethodCallResponse, TransactionToSignResponse } from "@curvegrid/multibaas-sdk";
 import { Configuration, ContractsApi, EventsApi, ChainsApi } from "@curvegrid/multibaas-sdk";
 import { useCallback, useMemo } from "react";
 
@@ -62,41 +61,6 @@ const useMultiBaas = (): MultiBaasHook => {
     }
   };
 
-  const callContractFunction = useCallback(
-    async (methodName: string, args: PostMethodArgs['args'] = [], from?: string): Promise<MethodCallResponse['output'] | TransactionToSignResponse['tx']> => {
-      const payload: PostMethodArgs = {
-        args,
-        ...(from ? { from } : {}),
-      };
-
-      const response = await contractsApi.callContractFunction(
-        chain as "ethereum",
-        invoiceAddressAlias,
-        invoiceContractLabel,
-        methodName,
-        payload
-      );
-
-      console.debug(`callContractFunction -> ${methodName}`, {
-        chain,
-        invoiceAddressAlias,
-        invoiceContractLabel,
-        payload,
-        result: response.data.result,
-      });
-
-      const result = response.data.result as MethodCallResponse | TransactionToSignResponse;
-      if (result.kind === "MethodCallResponse") {
-        return (result as MethodCallResponse).output;
-      } else if (result.kind === "TransactionToSignResponse") {
-        return (result as TransactionToSignResponse).tx;
-      } else {
-        throw new Error(`Unexpected response type: ${(result as any).kind}`);
-      }
-    },
-    [contractsApi, chain, invoiceAddressAlias, invoiceContractLabel]
-  );
-
   const registerInvoice = useCallback(async (invoiceHash: string, cloudWalletAddress: string): Promise<string | null> => {
     try {
       // When using Cloud Wallet, MultiBaas will automatically sign and submit the transaction
@@ -120,7 +84,9 @@ const useMultiBaas = (): MultiBaasHook => {
         // The transaction has been submitted, we can get the txHash from the response
         // Note: The actual txHash might be available after the transaction is mined
         // For now, we'll return a placeholder or check the response structure
-        return (result as any).txHash || (result as any).tx?.hash || "submitted";
+        const txResponse = result as TransactionToSignResponse;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (txResponse as unknown as { txHash?: string; tx?: { hash?: string } }).txHash || txResponse.tx?.hash || "submitted";
       }
 
       // If it's a MethodCallResponse, it was a read operation (shouldn't happen here)
@@ -152,6 +118,7 @@ const useMultiBaas = (): MultiBaasHook => {
         return null;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const events = response.data.result.map((event: any) => {
         // Handle indexed and non-indexed parameters
         // Indexed parameters (business, invoiceHash) might be in topics or inputs
@@ -161,6 +128,7 @@ const useMultiBaas = (): MultiBaasHook => {
         let timestamp = "";
 
         // Try to find in inputs first
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         event.event?.inputs?.forEach((input: any) => {
           if (input.name === "business") business = input.value || "";
           if (input.name === "invoiceHash") invoiceHash = input.value || "";
@@ -221,6 +189,7 @@ const useMultiBaas = (): MultiBaasHook => {
       }
 
       const data = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return data.result?.map((wallet: any) => ({
         address: wallet.address,
         label: wallet.label,

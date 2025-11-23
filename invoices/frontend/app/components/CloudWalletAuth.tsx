@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import useMultiBaas from "../hooks/useMultiBaas";
 
 interface CloudWalletAuthProps {
@@ -16,11 +16,7 @@ const CloudWalletAuth: React.FC<CloudWalletAuthProps> = ({
   const [selectedWallet, setSelectedWallet] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadWallets();
-  }, []);
-
-  const loadWallets = async () => {
+  const loadWallets = useCallback(async () => {
     setIsLoading(true);
     try {
       const walletList = await listCloudWallets();
@@ -37,7 +33,11 @@ const CloudWalletAuth: React.FC<CloudWalletAuthProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [listCloudWallets, onWalletConnected]);
+
+  useEffect(() => {
+    loadWallets();
+  }, [loadWallets]);
 
   const handleWalletChange = (address: string) => {
     setSelectedWallet(address);

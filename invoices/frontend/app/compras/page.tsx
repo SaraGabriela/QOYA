@@ -18,8 +18,8 @@ const ComprasPage: React.FC = () => {
     setCloudWalletAddress("");
   };
 
-  const handleInvoiceRegistered = (txHash: string) => {
-    // Trigger refresh of dashboard
+  const handleInvoiceRegistered = (_txHash?: string) => {
+    // Trigger refresh of dashboard (txHash is available but not used)
     setRefreshTrigger(Date.now().toString());
   };
 

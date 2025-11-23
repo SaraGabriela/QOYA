@@ -17,10 +17,6 @@ const Dashboard: React.FC = () => {
     setCloudWalletAddress("");
   };
 
-  const handleRefresh = () => {
-    setRefreshTrigger(Date.now().toString());
-  };
-
   return (
     <Layout businessAddress={cloudWalletAddress}>
       <div className="dashboard-page">
