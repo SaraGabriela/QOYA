@@ -14,6 +14,8 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
   const { registerInvoice } = useMultiBaas();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [invoiceHash, setInvoiceHash] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [provider, setProvider] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,11 +91,16 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
       setIsUploading(false);
     }
   };
-
+            const txHash = await registerInvoice(invoiceHash, cloudWalletAddress, {
+              amount,
+              provider,
+            });
   return (
     <div className="invoice-upload-form">
       <h2 className="form-title">Tokenizar Factura</h2>
       <form onSubmit={handleSubmit} className="form">
+              setAmount("");
+              setProvider("");
         <div className="form-group">
           <label htmlFor="pdf-file" className="form-label">
             Seleccionar archivo PDF
@@ -141,4 +148,28 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({
 };
 
 export default InvoiceUploadForm;
+
+              <div className="form-group">
+                <label className="form-label">Proveedor</label>
+                <input
+                  type="text"
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  placeholder="Nombre del proveedor"
+                  className="form-input"
+                  disabled={isUploading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Monto</label>
+                <input
+                  type="text"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Ej: 1000 ARS"
+                  className="form-input"
+                  disabled={isUploading}
+                />
+              </div>
 

@@ -1,12 +1,15 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import useMultiBaas from "../hooks/useMultiBaas";
+import AISuggestions from "./AISuggestions";
 
 interface InvoiceEvent {
   business: string;
   invoiceHash: string;
   timestamp: string;
   txHash: string;
+  amount?: string;
+  provider?: string;
 }
 
 interface InvoiceDashboardProps {
@@ -18,32 +21,42 @@ const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
   cloudWalletAddress,
   refreshTrigger,
 }) => {
-  const { getInvoiceEvents } = useMultiBaas();
+  const { invoices: allInvoices, getInvoiceEvents } = useMultiBaas();
   const [invoices, setInvoices] = useState<InvoiceEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchInvoices = useCallback(async () => {
+  // Keep a lightweight fetch for initial load if needed, but rely on reactive `allInvoices`
+  useEffect(() => {
+    const load = async () => {
+      if (!cloudWalletAddress) {
+        setInvoices([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // Optionally warm the list from the API/mock
+        await getInvoiceEvents(cloudWalletAddress);
+      } catch (err) {
+        // ignore
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [cloudWalletAddress, getInvoiceEvents]);
+
+  // Reactively update when the global invoices snapshot changes
+  useEffect(() => {
     if (!cloudWalletAddress) {
       setInvoices([]);
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const events = await getInvoiceEvents(cloudWalletAddress);
-      if (events) {
-        setInvoices(events);
-      }
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getInvoiceEvents, cloudWalletAddress]);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices, refreshTrigger]);
+    const filtered = allInvoices.filter((i) => i.business.toLowerCase() === cloudWalletAddress.toLowerCase());
+    setInvoices(filtered);
+  }, [allInvoices, cloudWalletAddress, refreshTrigger]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -64,7 +77,11 @@ const InvoiceDashboard: React.FC<InvoiceDashboardProps> = ({
   return (
     <div className="invoice-dashboard">
       <h2 className="dashboard-title">Facturas Tokenizadas</h2>
-      
+          {cloudWalletAddress && (
+            <div style={{ margin: "12px 0 18px 0" }}>
+              <AISuggestions />
+            </div>
+          )}
       {!cloudWalletAddress ? (
         <div className="empty-state">
           <p>Conecta tu Cloud Wallet para ver tus facturas</p>

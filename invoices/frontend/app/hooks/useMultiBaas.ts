@@ -1,7 +1,7 @@
 "use client";
 import type { PostMethodArgs, MethodCallResponse, TransactionToSignResponse } from "@curvegrid/multibaas-sdk";
 import { Configuration, ContractsApi, EventsApi, ChainsApi } from "@curvegrid/multibaas-sdk";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 
 interface ChainStatus {
   chainID: number;
@@ -18,6 +18,9 @@ interface InvoiceEvent {
   invoiceHash: string;
   timestamp: string;
   txHash: string;
+  // Optional metadata captured at upload time
+  amount?: string;
+  provider?: string;
 }
 
 // Dummy data for simulating invoice events (Mock Read)
@@ -45,12 +48,32 @@ const DUMMY_INVOICES: InvoiceEvent[] = [
   },
 ];
 
-// Store for newly registered invoices (to simulate immediate update)
-let registeredInvoices: InvoiceEvent[] = [];
+// Global store for invoices to simulate indexed state across hook instances
+let globalInvoices: InvoiceEvent[] = [...DUMMY_INVOICES];
+
+// Subscribers to notify when globalInvoices updates
+const invoiceSubscribers = new Set<(items: InvoiceEvent[]) => void>();
+
+const emitInvoices = () => {
+  invoiceSubscribers.forEach((cb) => {
+    try {
+      cb(globalInvoices);
+    } catch (e) {
+      // ignore subscriber errors
+    }
+  });
+};
 
 interface MultiBaasHook {
   getChainStatus: () => Promise<ChainStatus | null>;
-  registerInvoice: (invoiceHash: string, cloudWalletAddress: string) => Promise<string | null>;
+  // registerInvoice now accepts optional metadata captured from the upload form
+  registerInvoice: (
+    invoiceHash: string,
+    cloudWalletAddress: string,
+    metadata?: { amount?: string; provider?: string }
+  ) => Promise<string | null>;
+  // Expose a reactive snapshot of invoices for immediate UI updates
+  invoices: InvoiceEvent[];
   getInvoiceEvents: (businessAddress?: string) => Promise<InvoiceEvent[] | null>;
   listCloudWallets: () => Promise<CloudWallet[] | null>;
   getCloudWalletAddress: (label: string) => Promise<string | null>;
@@ -90,7 +113,11 @@ const useMultiBaas = (): MultiBaasHook => {
     }
   };
 
-  const registerInvoice = useCallback(async (invoiceHash: string, cloudWalletAddress: string): Promise<string | null> => {
+  const registerInvoice = useCallback(async (
+    invoiceHash: string,
+    cloudWalletAddress: string,
+    metadata?: { amount?: string; provider?: string }
+  ): Promise<string | null> => {
     try {
       // REAL IMPLEMENTATION: Call MultiBaas API to register invoice on-chain
       // When using Cloud Wallet, MultiBaas will automatically sign and submit the transaction
@@ -124,8 +151,13 @@ const useMultiBaas = (): MultiBaasHook => {
           invoiceHash,
           timestamp: new Date().toISOString(),
           txHash,
+          amount: metadata?.amount,
+          provider: metadata?.provider,
         };
-        registeredInvoices = [newInvoice, ...registeredInvoices];
+
+        // Update global invoices and notify subscribers for immediate UI update
+        globalInvoices = [newInvoice, ...globalInvoices];
+        emitInvoices();
         
         return txHash;
       }
@@ -139,23 +171,19 @@ const useMultiBaas = (): MultiBaasHook => {
   }, [contractsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
 
   const getInvoiceEvents = useCallback(async (businessAddress?: string): Promise<InvoiceEvent[] | null> => {
-    // MOCK: Return dummy invoice events immediately for demo purposes
-    // Real implementation would query MultiBaas Event Indexing API
+    // Return the current globalInvoices (with a small simulated delay)
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Combine dummy invoices with newly registered ones
-        const allInvoices = [...DUMMY_INVOICES, ...registeredInvoices];
-        
-        // Filter by business address if provided
+        const allInvoices = [...globalInvoices];
         if (businessAddress) {
-          const filtered = allInvoices.filter((event: InvoiceEvent) => 
+          const filtered = allInvoices.filter((event: InvoiceEvent) =>
             event.business.toLowerCase() === businessAddress.toLowerCase()
           );
           resolve(filtered);
         } else {
           resolve(allInvoices);
         }
-      }, 300); // Simulate network delay
+      }, 200);
     });
 
     /* REAL IMPLEMENTATION (commented for demo):
