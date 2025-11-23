@@ -7,7 +7,7 @@ import InvoiceDashboard from "./components/InvoiceDashboard";
 
 const Dashboard: React.FC = () => {
   const [cloudWalletAddress, setCloudWalletAddress] = useState<string>("");
-  const [refreshTrigger, setRefreshTrigger] = useState<string>("");
+  const [refreshTrigger] = useState<string>("");
 
   const handleWalletConnected = (address: string) => {
     setCloudWalletAddress(address);
