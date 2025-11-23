@@ -173,10 +173,18 @@ const useMultiBaas = (): MultiBaasHook => {
 
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
     try {
+      // Validate configuration
+      if (!mbBaseUrl || !mbApiKey) {
+        throw new Error("MultiBaas configuration missing. Please set NEXT_PUBLIC_MULTIBAAS_DEPLOYMENT_URL and NEXT_PUBLIC_MULTIBAAS_DAPP_USER_API_KEY");
+      }
+
       // Use direct HTTP call since CloudWalletsApi is not exported from the SDK
       // Using API v1 as per latest MultiBaas documentation
       const basePath = new URL("/api/v1", mbBaseUrl).toString();
       const apiUrl = `${basePath}/cloud-wallets`;
+      
+      console.debug("Fetching cloud wallets from:", apiUrl);
+      
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -186,18 +194,38 @@ const useMultiBaas = (): MultiBaasHook => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        if (response.status === 401) {
+          errorMessage = "Authentication failed. Please check your API key.";
+        } else if (response.status === 403) {
+          errorMessage = "Access denied. Your API key may not have permissions to list Cloud Wallets.";
+        } else if (response.status === 404) {
+          errorMessage = "Endpoint not found. The API version or endpoint may be incorrect.";
+        } else {
+          errorMessage = `Error ${response.status}: ${errorText || "Unknown error"}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      
+      if (!data || !data.result) {
+        console.warn("Unexpected response format:", data);
+        return [];
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data.result?.map((wallet: any) => ({
+      return data.result.map((wallet: any) => ({
         address: wallet.address,
         label: wallet.label,
-      })) || null;
+      }));
     } catch (err) {
       console.error("Error listing cloud wallets:", err);
-      return null;
+      // Re-throw to allow component to handle the error
+      throw err;
     }
   }, [mbBaseUrl, mbApiKey]);
 
