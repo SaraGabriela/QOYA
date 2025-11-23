@@ -56,4 +56,53 @@ Qora becomes the “always-on” assistant ensuring every transaction is recorde
 ---
 
 ## Workflow
+<img width="3185" height="1132" alt="image" src="https://github.com/user-attachments/assets/dd170f4a-ee3e-4702-a5c7-57685bdee1d0" />
+
+## Key Benefits
+- Automates payment execution
+- Stores receipts securely
+- Generates an immutable, verifiable credit history
+- Reduces errors and administrative overhead
+- Frees entrepreneurs to focus on growth and innovation
+
+## Phases
+Phase 1: Supplier Payment Module
+1. Order Recording
+- Stores details for each order: date, supplier, ingredients, quantities
+2. Receipt Confirmation
+- Users confirm supplies received
+- Records total payable, payment deadlines, and supplier info
+3. Payment Calculation
+- Aggregates totals per supplier
+- Schedules payments by due date
+4. Wallet Balance Verification
+- Checks business wallet balance
+- Requests additional funds if insufficient
+- Confirms payment initiation with the user
+5. Payment Execution
+- Automates payment transfer to suppliers
+6. Confirmation & Receipt Storage
+- Receives payment confirmations
+- Stores receipts on-chain for verification
+- Sends copies to suppliers
+7. History & Auditing
+- Maintains full payment history with statuses (success, errors)
+  8. Dashboard / Visualization
+- Wallet movements, total paid per period
+- Supplier ranking by payments
+- Quick insights for decision-making
+
+## Roadmap / Future Vision
+- Build on-chain credit scores from payment history
+- Expand Qoya to other operations:
+- Inventory management
+- Promotion planning
+- Accounting and bookkeeping
+- Reduce operational costs and manual work for entrepreneurs
+
+## Conclusion
+Qoya acts as a virtual administrative assistant, automating repetitive tasks, ensuring reliable payments, and providing entrepreneurs with actionable insights to make faster, smarter business decisions. It helps small food businesses save time, reduce errors, and focus on growth, innovation, and customer experience.
+
+## Graphic assets
+https://drive.google.com/drive/folders/14km4XduTWgAJsIJfOJRoAYdPwBp5ztLH
 
