@@ -229,12 +229,21 @@ const useMultiBaas = (): MultiBaasHook => {
             ? (typeof timestamp === "string" ? parseInt(timestamp) : (typeof timestamp === "number" ? timestamp : 0))
             : 0;
 
-          const tx = event.transaction as RawEvent['transaction'];
+          const tx = event.transaction as RawEvent['transaction'] | undefined;
+          let txHashStr = "";
+          if (tx) {
+            if ("txHash" in tx && typeof tx.txHash === "string") {
+              txHashStr = tx.txHash;
+            } else if ("tx" in tx && tx.tx && typeof tx.tx.hash === "string") {
+              txHashStr = tx.tx.hash;
+            }
+          }
+
           return {
             business: business.toLowerCase(),
             invoiceHash,
             timestamp: timestampValue > 0 ? new Date(timestampValue * 1000).toISOString() : new Date().toISOString(),
-            txHash: tx?.txHash || tx?.tx?.hash || "",
+            txHash: txHashStr,
           } as InvoiceEvent;
         });
 
