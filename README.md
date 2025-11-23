@@ -106,6 +106,9 @@ Qoya acts as a virtual administrative assistant, automating repetitive tasks, en
 ## Graphic assets
 https://drive.google.com/drive/folders/14km4XduTWgAJsIJfOJRoAYdPwBp5ztLH
 
+## Qoya x402 implementation
+https://github.com/Gabrululu/Qoya
+
 ## Presentation
 https://www.figma.com/proto/bkrGfHMzFYZrsM3b3ftUFQ/Untitled?node-id=5-689&p=f&t=68vHu9ycyQ3wJQSF-1&scaling=contain&content-scaling=fixed&page-id=5%3A2
 
