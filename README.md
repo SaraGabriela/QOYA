@@ -117,4 +117,4 @@ Jani Jesse - Fullstack
 Yamille Celis - UX/XD
 Alexandra Jaime - Business
 
-
+https://www.loom.com/share/8cd834e091ab4f43b63048aa5e833e0b
