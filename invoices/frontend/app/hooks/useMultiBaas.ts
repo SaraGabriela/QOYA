@@ -171,7 +171,69 @@ const useMultiBaas = (): MultiBaasHook => {
   }, [contractsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
 
   const getInvoiceEvents = useCallback(async (businessAddress?: string): Promise<InvoiceEvent[] | null> => {
-    // Return the current globalInvoices (with a small simulated delay)
+    // If real MultiBaas is configured, try to fetch indexed events from the API
+    const isConfigured = Boolean(mbBaseUrl && mbApiKey);
+
+    if (isConfigured) {
+      try {
+        const eventSignature = "InvoiceRegistered(address,bytes32,uint256)";
+        const response = await eventsApi.listEvents(
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          chain as "ethereum",
+          invoiceAddressAlias,
+          invoiceContractLabel,
+          eventSignature,
+          100
+        );
+
+        if (!response.data.result) {
+          return [];
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const events = (response.data.result as any[]).map((event: any) => {
+          let business = "";
+          let invoiceHash = "";
+          let timestamp = "";
+
+          // Try to parse inputs
+          event.event?.inputs?.forEach((input: any) => {
+            if (input.name === "business") business = input.value || business;
+            if (input.name === "invoiceHash") invoiceHash = input.value || invoiceHash;
+            if (input.name === "timestamp") timestamp = input.value || timestamp;
+          });
+
+          // Fallback to topics for indexed params
+          if (!business && event.topics && event.topics.length > 1) business = event.topics[1] || "";
+          if (!invoiceHash && event.topics && event.topics.length > 2) invoiceHash = event.topics[2] || "";
+
+          const timestampValue = timestamp ? (typeof timestamp === "string" ? parseInt(timestamp) : timestamp) : 0;
+
+          return {
+            business: business.toLowerCase(),
+            invoiceHash,
+            timestamp: timestampValue > 0 ? new Date(timestampValue * 1000).toISOString() : new Date().toISOString(),
+            txHash: event.transaction?.txHash || event.transaction?.tx?.hash || "",
+          } as InvoiceEvent;
+        });
+
+        if (businessAddress) {
+          return events.filter((ev) => ev.business.toLowerCase() === businessAddress.toLowerCase());
+        }
+
+        return events;
+      } catch (err) {
+        console.error("Error fetching events from MultiBaas, falling back to mock:", err);
+        // Fall through to mock below
+      }
+    }
+
+    // Fallback to the local simulated store
     return new Promise((resolve) => {
       setTimeout(() => {
         const allInvoices = [...globalInvoices];
@@ -261,8 +323,36 @@ const useMultiBaas = (): MultiBaasHook => {
   }, [eventsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
 
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
-    // MOCK: Return dummy wallet immediately for demo purposes
-    // Real implementation would call MultiBaas API
+    // If MultiBaas deployment URL and API key are configured, call the real Cloud Wallets endpoint
+    const basePath = mbBaseUrl ? new URL("/api/v1", mbBaseUrl).toString() : undefined;
+    if (basePath && mbApiKey) {
+      try {
+        const apiUrl = `${basePath}/cloud-wallets`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${mbApiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Cloud Wallets API error ${response.status}: ${text}`);
+        }
+
+        const data = await response.json();
+        if (!data || !data.result) return [];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (data.result as any[]).map((w) => ({ address: w.address, label: w.label }));
+      } catch (err) {
+        console.error("Error listing cloud wallets from MultiBaas:", err);
+        // fallback to mock
+      }
+    }
+
+    // MOCK fallback
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([
