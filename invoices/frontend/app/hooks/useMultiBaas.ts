@@ -141,8 +141,8 @@ const useMultiBaas = (): MultiBaasHook => {
         // The transaction has been submitted, we can get the txHash from the response
         // Note: The actual txHash might be available after the transaction is mined
         const txResponse = result as TransactionToSignResponse;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const txHash = (txResponse as unknown as { txHash?: string; tx?: { hash?: string } }).txHash || txResponse.tx?.hash || `0x${Math.random().toString(16).substr(2, 64)}`;
+        const txObj = txResponse as unknown as { txHash?: string; tx?: { hash?: string } };
+        const txHash = txObj.txHash || txObj.tx?.hash || `0x${Math.random().toString(16).substr(2, 64)}`;
         
         // Add the newly registered invoice to the dummy list for immediate UI update
         // This simulates the event being indexed immediately
@@ -195,30 +195,46 @@ const useMultiBaas = (): MultiBaasHook => {
           return [];
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const events = (response.data.result as any[]).map((event: any) => {
+        type RawEvent = {
+          event?: { inputs?: Array<{ name?: string; value?: unknown }> };
+          topics?: string[];
+          transaction?: { txHash?: string; tx?: { hash?: string } } | { txHash?: string };
+        };
+
+        const raw = response.data.result as unknown;
+        if (!Array.isArray(raw)) return [];
+
+        const events = (raw as RawEvent[]).map((event) => {
           let business = "";
           let invoiceHash = "";
-          let timestamp = "";
+          let timestamp: unknown = "";
 
           // Try to parse inputs
-          event.event?.inputs?.forEach((input: any) => {
-            if (input.name === "business") business = input.value || business;
-            if (input.name === "invoiceHash") invoiceHash = input.value || invoiceHash;
-            if (input.name === "timestamp") timestamp = input.value || timestamp;
-          });
+          const inputs = event.event?.inputs;
+          if (Array.isArray(inputs)) {
+            for (const input of inputs) {
+              const name = input?.name as string | undefined;
+              const value = input?.value as unknown;
+              if (name === "business" && typeof value === "string") business = value;
+              if (name === "invoiceHash" && typeof value === "string") invoiceHash = value;
+              if (name === "timestamp" && (typeof value === "string" || typeof value === "number")) timestamp = value;
+            }
+          }
 
           // Fallback to topics for indexed params
-          if (!business && event.topics && event.topics.length > 1) business = event.topics[1] || "";
-          if (!invoiceHash && event.topics && event.topics.length > 2) invoiceHash = event.topics[2] || "";
+          if (!business && Array.isArray(event.topics) && event.topics.length > 1) business = event.topics[1] || "";
+          if (!invoiceHash && Array.isArray(event.topics) && event.topics.length > 2) invoiceHash = event.topics[2] || "";
 
-          const timestampValue = timestamp ? (typeof timestamp === "string" ? parseInt(timestamp) : timestamp) : 0;
+          const timestampValue = timestamp
+            ? (typeof timestamp === "string" ? parseInt(timestamp) : (typeof timestamp === "number" ? timestamp : 0))
+            : 0;
 
+          const tx = event.transaction as RawEvent['transaction'];
           return {
             business: business.toLowerCase(),
             invoiceHash,
             timestamp: timestampValue > 0 ? new Date(timestampValue * 1000).toISOString() : new Date().toISOString(),
-            txHash: event.transaction?.txHash || event.transaction?.tx?.hash || "",
+            txHash: tx?.txHash || tx?.tx?.hash || "",
           } as InvoiceEvent;
         });
 
@@ -320,7 +336,7 @@ const useMultiBaas = (): MultiBaasHook => {
       return null;
     }
     */
-  }, [eventsApi, chain, invoiceAddressAlias, invoiceContractLabel]);
+  }, [eventsApi, chain, invoiceAddressAlias, invoiceContractLabel, mbBaseUrl, mbApiKey]);
 
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
     // If MultiBaas deployment URL and API key are configured, call the real Cloud Wallets endpoint
@@ -344,8 +360,11 @@ const useMultiBaas = (): MultiBaasHook => {
         const data = await response.json();
         if (!data || !data.result) return [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (data.result as any[]).map((w) => ({ address: w.address, label: w.label }));
+        type RawWallet = { address?: string; label?: string };
+        const raw = data.result as unknown;
+        if (!Array.isArray(raw)) return [];
+
+        return (raw as RawWallet[]).map((w) => ({ address: w.address || "", label: w.label || "" }));
       } catch (err) {
         console.error("Error listing cloud wallets from MultiBaas:", err);
         // fallback to mock
