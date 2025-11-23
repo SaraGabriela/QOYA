@@ -1,7 +1,7 @@
 "use client";
 import type { PostMethodArgs, MethodCallResponse, TransactionToSignResponse, Event } from "@curvegrid/multibaas-sdk";
 import type { SendTransactionParameters } from "@wagmi/core";
-import { Configuration, ContractsApi, EventsApi, ChainsApi, CloudWalletsApi } from "@curvegrid/multibaas-sdk";
+import { Configuration, ContractsApi, EventsApi, ChainsApi } from "@curvegrid/multibaas-sdk";
 import { useCallback, useMemo } from "react";
 
 interface ChainStatus {
@@ -37,7 +37,7 @@ const useMultiBaas = (): MultiBaasHook => {
   const invoiceAddressAlias = (process.env.NEXT_PUBLIC_MULTIBAAS_INVOICE_ADDRESS_ALIAS || "invoice_registry").toString().replace(/['"]/g, "").trim();
 
   // Use the chain id configured in the frontend env, fallback to 'ethereum'
-  const chain = (process.env.NEXT_PUBLIC_MULTIBAAS_CHAIN_ID || "ethereum").toString().replace(/['"]/g, "");
+  const chain = (process.env.NEXT_PUBLIC_MULTIBAAS_CHAIN_ID || "ethereum").toString().replace(/['"]/g, "") as "ethereum" | string;
 
   // Memoize mbConfig
   const mbConfig = useMemo(() => {
@@ -51,11 +51,10 @@ const useMultiBaas = (): MultiBaasHook => {
   const contractsApi = useMemo(() => new ContractsApi(mbConfig), [mbConfig]);
   const eventsApi = useMemo(() => new EventsApi(mbConfig), [mbConfig]);
   const chainsApi = useMemo(() => new ChainsApi(mbConfig), [mbConfig]);
-  const cloudWalletsApi = useMemo(() => new CloudWalletsApi(mbConfig), [mbConfig]);
 
   const getChainStatus = async (): Promise<ChainStatus | null> => {
     try {
-      const response = await chainsApi.getChainStatus(chain);
+      const response = await chainsApi.getChainStatus(chain as "ethereum");
       return response.data.result as ChainStatus;
     } catch (err) {
       console.error("Error getting chain status:", err);
@@ -71,7 +70,7 @@ const useMultiBaas = (): MultiBaasHook => {
       };
 
       const response = await contractsApi.callContractFunction(
-        chain,
+        chain as "ethereum",
         invoiceAddressAlias,
         invoiceContractLabel,
         methodName,
@@ -86,12 +85,13 @@ const useMultiBaas = (): MultiBaasHook => {
         result: response.data.result,
       });
 
-      if (response.data.result.kind === "MethodCallResponse") {
-        return response.data.result.output;
-      } else if (response.data.result.kind === "TransactionToSignResponse") {
-        return response.data.result.tx;
+      const result = response.data.result as MethodCallResponse | TransactionToSignResponse;
+      if (result.kind === "MethodCallResponse") {
+        return (result as MethodCallResponse).output;
+      } else if (result.kind === "TransactionToSignResponse") {
+        return (result as TransactionToSignResponse).tx;
       } else {
-        throw new Error(`Unexpected response type: ${response.data.result.kind}`);
+        throw new Error(`Unexpected response type: ${(result as any).kind}`);
       }
     },
     [contractsApi, chain, invoiceAddressAlias, invoiceContractLabel]
@@ -107,7 +107,7 @@ const useMultiBaas = (): MultiBaasHook => {
       };
 
       const response = await contractsApi.callContractFunction(
-        chain,
+        chain as "ethereum",
         invoiceAddressAlias,
         invoiceContractLabel,
         "registerInvoice",
@@ -115,11 +115,12 @@ const useMultiBaas = (): MultiBaasHook => {
       );
 
       // If it's a TransactionToSignResponse, MultiBaas has submitted it via Cloud Wallet
-      if (response.data.result.kind === "TransactionToSignResponse") {
+      const result = response.data.result as MethodCallResponse | TransactionToSignResponse;
+      if (result.kind === "TransactionToSignResponse") {
         // The transaction has been submitted, we can get the txHash from the response
         // Note: The actual txHash might be available after the transaction is mined
         // For now, we'll return a placeholder or check the response structure
-        return response.data.result.txHash || "submitted";
+        return (result as any).txHash || (result as any).tx?.hash || "submitted";
       }
 
       // If it's a MethodCallResponse, it was a read operation (shouldn't happen here)
@@ -140,7 +141,7 @@ const useMultiBaas = (): MultiBaasHook => {
         undefined,
         undefined,
         false,
-        chain,
+        chain as "ethereum",
         invoiceAddressAlias,
         invoiceContractLabel,
         eventSignature,
@@ -151,7 +152,7 @@ const useMultiBaas = (): MultiBaasHook => {
         return null;
       }
 
-      const events = response.data.result.map((event: Event) => {
+      const events = response.data.result.map((event: any) => {
         // Handle indexed and non-indexed parameters
         // Indexed parameters (business, invoiceHash) might be in topics or inputs
         // Non-indexed parameters (timestamp) are in inputs
@@ -160,7 +161,7 @@ const useMultiBaas = (): MultiBaasHook => {
         let timestamp = "";
 
         // Try to find in inputs first
-        event.event.inputs?.forEach((input: any) => {
+        event.event?.inputs?.forEach((input: any) => {
           if (input.name === "business") business = input.value || "";
           if (input.name === "invoiceHash") invoiceHash = input.value || "";
           if (input.name === "timestamp") timestamp = input.value || "";
@@ -203,8 +204,24 @@ const useMultiBaas = (): MultiBaasHook => {
 
   const listCloudWallets = useCallback(async (): Promise<CloudWallet[] | null> => {
     try {
-      const response = await cloudWalletsApi.listCloudWallets();
-      return response.data.result?.map((wallet: any) => ({
+      // Use direct HTTP call since CloudWalletsApi is not exported from the SDK
+      // Use the same basePath structure as other APIs
+      const basePath = new URL("/api/v0", mbBaseUrl).toString();
+      const apiUrl = `${basePath}/cloud-wallets`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${mbApiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.result?.map((wallet: any) => ({
         address: wallet.address,
         label: wallet.label,
       })) || null;
@@ -212,7 +229,7 @@ const useMultiBaas = (): MultiBaasHook => {
       console.error("Error listing cloud wallets:", err);
       return null;
     }
-  }, [cloudWalletsApi]);
+  }, [mbBaseUrl, mbApiKey]);
 
   const getCloudWalletAddress = useCallback(async (label: string): Promise<string | null> => {
     try {
